@@ -140,4 +140,100 @@
 (hex-draw 2 2 (hex-grid 2 2))
 (hex-draw 2 2 (hex-outer-walls 2 2))
 
+(require '[clojure.zip :as z])
+(def v [[1 2 [3 4]] [5 6]])
+(-> v z/vector-zip z/node)
+(-> v z/vector-zip z/down z/node)
+(-> v z/vector-zip z/down z/right z/node)
+(-> v z/vector-zip z/down z/right (z/replace 56) z/node)
+(-> v z/vector-zip z/down z/right (z/replace 56) z/root)
+(-> v z/vector-zip z/down z/right z/remove z/node)
+(-> v z/vector-zip z/down z/right z/remove z/root)
+(-> v z/vector-zip z/down z/down z/right (z/edit * 42) z/root)
 
+(defn html-zip [root]
+  (z/zipper
+    vector?
+    (fn [[tagname & xs]]
+      (if (map? (first xs)) (next xs) xs))
+    (fn [[tagname & xs] children]
+      (into (if (map? (first xs)) [tagname (first xs)] [tagname])
+            children))
+    root))
+
+(defn wrap 
+  "Wraps the current node in the specified tag and attributes."
+  ([loc tag]
+   (z/edit loc #(vector tag %)))
+  ([loc tag attrs] 
+   (z/edit loc #(vector tag attrs %))))
+(def h [:body [:h1 "Clojure"]
+        [:p "What a wonderful language!"]])
+
+(-> h html-zip z/down z/right z/down (wrap :b) z/root)
+
+(def labyrinith (maze (grid 10 10)))
+(def labyrinith (let [g (grid 10 10)] (reduce disj g (maze g))))
+(def theseus (rand-nth (distinct (apply concat labyrinith))))
+(def minotaur (rand-nth (distinct (apply concat labyrinith))))
+
+(defn ariadne-zip
+  [labyrinith loc]
+  (let [paths (reduce (fn [index [a b]]
+                        (merge-with into index {a [b] b [a]}))
+                      {} (map seq labyrinith))
+        children (fn [[from to]]
+                   (seq (for [loc (paths to)
+                              :when (not= loc from)]
+                          [to loc])))]
+    (z/zipper (constantly true)
+              children
+              nil
+              [nil loc])))
+
+(->> theseus
+     (ariadne-zip labyrinith)
+     (iterate z/next)
+     (filter #(= minotaur (second (z/node %))))
+     first z/path
+     (map second))
+
+
+(defn drawMazePath
+  [w h maze path]
+  (doto (javax.swing.JFrame. "Maze")
+    (.setContentPane
+      (doto (proxy [javax.swing.JPanel] []
+              (paintComponent [^java.awt.Graphics g]
+                (let [g (doto ^java.awt.Graphics2D (.create g)
+                          (.scale 10 10)
+                          (.translate 1.5 1.5)
+                          (.setStroke (java.awt.BasicStroke. 0.4)))]
+                  (.drawRect g -1 -1 w h)
+                  (doseq [[[xa ya] [xb yb]] (map sort maze)]
+                    (let [[xc yc] (if (= xa xb)
+                                    [(dec xa) ya]
+                                    [xa (dec ya)])]
+                      (.drawLine g xa ya xc yc)))
+                  (.translate g -0.5 -0.5)
+                  (.setColor g java.awt.Color/RED)
+                  (doseq [[[xa ya] [xb yb]] path]
+                    (.drawLine g xa ya xb yb)))))
+        (.setPreferredSize (java.awt.Dimension.
+                             (* 10 (inc w)) (* 10 (inc h))))))
+    .pack
+    (.setVisible true)))
+
+(let [w 40, h 40
+      grid (grid w h)
+      walls (maze grid)
+      labyrinith (reduce disj grid walls)
+      places (distinct (apply concat labyrinith))
+      theseus (rand-nth places)
+      minotaur (rand-nth places)
+      path (->> theseus
+                (ariadne-zip labyrinith)
+                (iterate z/next)
+                (filter #(= minotaur (first (z/node %))))
+                first z/path rest)]
+  (drawMazePath w h walls path))
