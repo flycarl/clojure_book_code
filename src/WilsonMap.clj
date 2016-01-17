@@ -62,10 +62,6 @@
 
 (draw 3 3 (maze (grid 3 3)))
 (doto (new java.util.HashMap) (.put "a" 1) (.put "b" 2))
-(doto ^java.awt.Graphics2D (.create g)
-                          (.scale 10 10)
-                          (.translate 1.5 1.5)
-                          (.setStroke (java.awt.BasicStroke.0.4)))
 (java.awt.BasicStroke. 0.4)
 
 (def frame (javax.swing.JFrame. "Hello Frame"))
@@ -143,3 +139,5 @@
 (hex-draw 20 20 (maze (hex-grid 20 20)))
 (hex-draw 2 2 (hex-grid 2 2))
 (hex-draw 2 2 (hex-outer-walls 2 2))
+
+
