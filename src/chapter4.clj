@@ -64,3 +64,41 @@
 (deliver aa 42)
 @aa
 @bb
+
+(defn call-service
+  [arg1 arg2 callback-fn]
+  ; ... perfomr service call, eventually invoking callback-fn with results...
+  (future (callback-fn (+ arg1 arg2) (- arg1 arg2))))
+
+(defn sync-fn
+  [async-fn]
+  (fn [& args]
+    (let [result (promise)]
+      (apply async-fn (conj (vec args) #(deliver result %&)))
+      @result)))
+
+((sync-fn call-service) 8 7)
+
+(defn phone-numbers
+  [string]
+  (re-seq #"(\d{3})[\.-]?(\d{3})[\.-]?(\d{4})" string))
+
+(phone-numbers "Sunil: 342.234.2342, Betty: 343.442.2342")
+(apply str (concat (repeat 2 \space) "Sunil: 342.234.2342, Betty: 343.442.2342"))
+(def files (repeat 100
+                   (apply str
+                          (concat (repeat 1000000 \space)
+                                  "Sunil: 342.234.2342, Betty: 343.442.2342"))))
+(time (dorun (map phone-numbers files)))
+(time (dorun (pmap phone-numbers files)))
+(def files2 (repeat 100000
+                   (apply str
+                          (concat (repeat 1000 \space)
+                                  "Sunil: 342.234.2342, Betty: 343.442.2342"))))
+(time (dorun (map phone-numbers files2)))
+(time (dorun (pmap phone-numbers files2)))
+(time (->> files2
+           (partition-all 250)
+           (pmap (fn [chunk] (doall (map phone-numbers chunk))))
+           (apply concat)
+           dorun))
