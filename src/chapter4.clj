@@ -1,7 +1,7 @@
-(ns chapter4)
+(ns chapter4 (:use clojure.pprint))
 
 (def d (delay (println "Running...")
-              :done!))
+            :done!))
 (deref d)
 
 (defn get-document
@@ -102,3 +102,91 @@
            (pmap (fn [chunk] (doall (map phone-numbers chunk))))
            (apply concat)
            dorun))
+
+(defmacro futures
+  [n & exprs]
+  (vec (for [_ (range n)
+             expr exprs]
+         `(future ~expr))))
+
+(defmacro wait-futures
+  [& args]
+  `(doseq [f# (futures ~@args)]
+     @f#))
+
+(def sarah (atom {:name "Sarah" :age 25 :wears-glasses? false}))
+(swap! sarah update-in [:age] + 3)
+(swap! sarah (comp #(update-in % [:age] inc)
+                   #(assoc % :wears-glasses? false)))
+
+(def xs (atom #{1 2 3}))
+(wait-futures 1 (swap! xs (fn [v]
+                            (Thread/sleep 250)
+                            (println "trying 4")
+                            (conj v 4)))
+
+              (swap! xs (fn [v]
+                          (Thread/sleep 500)
+                          (println "trying 5")
+                          (conj v 5))))
+
+(def x (atom 2000))
+(swap! x #(Thread/sleep %))
+
+(compare-and-set! xs :wrong "new value")
+(compare-and-set! xs @xs "new value")
+
+(def xs (atom #{1 2}))
+(compare-and-set! xs #{1 2} "new value")
+(reset! xs :y)
+(deref xs)
+
+(defn echo-watch
+  [key identity old new]
+  (println key old "=>" new))
+
+(def sarah (atom {:name "Sarah" :age 25}))
+(add-watch sarah :echo echo-watch)
+(swap! sarah update-in [:age] inc)
+(add-watch sarah :echo2 echo-watch)
+(swap! sarah update-in [:age] inc)
+
+(remove-watch sarah :echo2)
+(swap! sarah update-in [:age] inc)
+
+(def history (atom ()))
+
+(defn log->list
+  [dest-atom key source old new]
+  (when (not= old new)
+    (swap! dest-atom conj new)))
+
+(def sarah (atom {:anme "Sarah", :age 25}))
+(add-watch sarah :record (partial log->list history))
+(swap! sarah update-in [:age] inc)
+(swap! sarah update-in [:age] inc)
+(swap! sarah identity)
+(swap! sarah assoc :wears-glasses? true)
+(swap! sarah update-in [:age] inc)
+
+(pprint (deref history))
+
+
+(def n (atom 1 :validator pos?))
+(swap! n + 500)
+(swap! n - 1000)
+
+(set-validator! sarah #(or (:age %)
+                           (throw (IllegalStateException. "People must have `:age`s!"))))
+(swap! sarah dissoc :age)
+
+(defn character 
+  [name & {:as opts}]
+  (ref (merge {:name name :items #{} :health 500}
+              opts)))
+
+(def smaug (character "Smag" :health 500 :strength 400 :items (set (range 50))))
+(def bilbo (character "Bilbo" :health 100 :strength 100))
+(def gandalf (character "Gandalf" :health 75 :mana 750))
+
+
