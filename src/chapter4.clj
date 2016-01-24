@@ -180,13 +180,3 @@
                            (throw (IllegalStateException. "People must have `:age`s!"))))
 (swap! sarah dissoc :age)
 
-(defn character 
-  [name & {:as opts}]
-  (ref (merge {:name name :items #{} :health 500}
-              opts)))
-
-(def smaug (character "Smag" :health 500 :strength 400 :items (set (range 50))))
-(def bilbo (character "Bilbo" :health 100 :strength 100))
-(def gandalf (character "Gandalf" :health 75 :mana 750))
-
-
