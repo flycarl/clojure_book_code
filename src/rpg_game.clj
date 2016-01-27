@@ -136,6 +136,6 @@
                           (:validator cdata))]
     (ref (dissoc cdata :validator)
          :validator #(every? (fn [v] (v %)) validators))))
+
 (def bilbo (character "Bilbo" :health 100 :strength 100))
-
-
+(enforce-max-health "Bilbo" 100)
