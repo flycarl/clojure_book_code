@@ -122,20 +122,37 @@
 (dosync (alter bilbo (constantly {:name "Bilbo"})))
 
 (defn- enforce-max-health
-  [{:keys [name health]}]
+  [name max-health]
   (fn [character-data]
-    (or (<= (:health character-data) health)
-        (throw (IllegalStateException. (str name " is already at max health"))))))
+    (or (<= (:health character-data) max-health)
+        (throw (IllegalStateException. (str (format  "%s is already at max health %d"name max-health)))))))
 
 (defn character
   [name & {:as opts}]
   (let [cdata (merge {:name name :items #{} :health 500}
                      opts)
         cdata (assoc cdata :max-health (:health cdata))
-        validators (list* (enforce-max-health name (:health cdata))
+        validators (list* ( enforce-max-health name (:health cdata))
                           (:validator cdata))]
     (ref (dissoc cdata :validator)
          :validator #(every? (fn [v] (v %)) validators))))
 
 (def bilbo (character "Bilbo" :health 100 :strength 100))
-(enforce-max-health "Bilbo" 100)
+
+(heal gandalf bilbo)
+
+(dosync (alter bilbo assoc-in [:health] 95))
+(heal gandalf bilbo)
+
+(defn heal
+  [healer target]
+  (dosync
+    (let [aid (min (* (rand 0.1) (:mana @healer))
+                   (- (:max-health @target) (:health @target)))]
+      (when (pos? aid)
+        (commute healer update-in [:mana] - (max 5 (/ aid 5)))
+        (alter target update-in [:health] + aid)))))
+
+(dosync (alter bilbo assoc-in [:health] 95))
+(heal gandalf bilbo)
+

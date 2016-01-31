@@ -180,3 +180,23 @@
                            (throw (IllegalStateException. "People must have `:age`s!"))))
 (swap! sarah dissoc :age)
 
+(defn unsafe
+  []
+  (io! (println "writing to database...")))
+(dosync (unsafe))
+
+(def x (ref (java.util.ArrayList.)))
+(wait-futures 2 (dosync (dotimes [v 5]
+                          (Thread/sleep (rand-int 50))
+                          (alter x #(doto % (.add v))))))
+(deref x)
+
+(def x (ref 0))
+(dosync 
+  @(future (dosync (ref-set x 0)))
+  (ref-set x 1))
+
+(def a (ref 0))
+(future (dotimes [_ 500] (dosync (Thread/sleep 200) (alter a inc))))
+(deref (future (dosync (Thread/sleep 1000) @a)))
+(ref-history-count a)
