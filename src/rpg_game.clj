@@ -156,3 +156,11 @@
 (dosync (alter bilbo assoc-in [:health] 95))
 (heal gandalf bilbo)
 
+(def daylight (ref 1))
+
+(defn attack
+  [aggressor target]
+  (dosync 
+    (let [damage (* (rand 0.1) (:strength @aggressor) @daylight)]
+      (commute target update-in [:health] #(max 0 (- % damage))))))
+

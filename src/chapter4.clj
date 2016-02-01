@@ -198,5 +198,38 @@
 
 (def a (ref 0))
 (future (dotimes [_ 500] (dosync (Thread/sleep 200) (alter a inc))))
-(deref (future (dosync (Thread/sleep 1000) @a)))
+@(future (dosync (Thread/sleep 1000) @a))
 (ref-history-count a)
+
+(def a (ref 0))
+(future (dotimes [_ 500] (dosync (Thread/sleep 20) (alter a inc))))
+@(future (dosync (Thread/sleep 1000) @a))
+(ref-history-count a)
+
+(def a (ref 0 :max-history 100))
+(future (dotimes [_ 500] (dosync (Thread/sleep 20) (alter a inc))))
+@(future (dosync (Thread/sleep 1000) @a))
+(ref-history-count a)
+
+(def a (ref 0 :min-history 50 :max-history 100))
+(future (dotimes [_ 500] (dosync (Thread/sleep 20) (alter a inc))))
+@(future (dosync (Thread/sleep 1000) @a))
+(ref-history-count a)
+
+map
+#'map
+@#'map
+
+(def ^:private everyting 42)
+(def ^{ :private true} everyting 42)
+
+(def a
+  "A sample value."
+  5)
+
+(defn b 
+  "A sample calculation using `a`." 
+  [c]
+  (+ a c))
+(b 3)
+(doc b)
