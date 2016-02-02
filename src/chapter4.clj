@@ -233,3 +233,39 @@ map
   (+ a c))
 (b 3)
 (doc b)
+
+(let [a 1
+      b 2]
+  (println (+ a b))
+  (let [b 3
+        + -]
+    (println (+ a b))))
+
+(def ^:dynamic *max-value* 255)
+(defn valid-value?
+  [v]
+  (<= v *max-value*))
+(binding [*max-value* 500]
+  (valid-value? 299))
+(binding [*max-value* 500]
+  (println (valid-value? 299))
+  (doto (Thread. #(println "in other thread:" (valid-value? 299)))
+    .start
+    .join))
+
+(def ^:dynamic *var* :root)
+(defn get-*var* [] *var*)
+(binding [*var* :a]
+  (binding [*var* :b]
+    (binding [*var* :c]
+      (get-*var*))))
+
+(defn http-get
+  [url-string]
+  (let [conn (-> url-string java.net.URL. .openConnection)
+        response-code (.getResponseCode conn)]
+    (if (== 404 response-code)
+      [response-code]
+      [response-code (-> conn .getInputStream slurp)])))
+(http-get "http://163.com/bac-url")
+(http-get "http://163.com/")
