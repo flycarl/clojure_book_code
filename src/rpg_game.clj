@@ -164,3 +164,35 @@
     (let [damage (* (rand 0.1) (:strength @aggressor) @daylight)]
       (commute target update-in [:health] #(max 0 (- % damage))))))
 
+
+
+(require '[clojure.java.io :as io])
+(def console (agent *out*))
+(def character-log (agent (io/writer "character-states.log" :append true)))
+(defn dwrite
+  [^java.io.Writer w & content]
+  #_(doseq [x (interpose " " content)]
+    (.write w (str x)))
+  #_(doto w
+    (.write "\n")
+    .flush))
+(defn long-reference
+  [reference & writer-agents]
+  (add-watch reference :log
+             (fn [_ reference old new]
+               (doseq [writer-agent writer-agents]
+                 (send-off writer-agent dwrite new)))))
+
+(def smaug (character "Smaug" :health 500 :strength 400))
+(def bilbo (character "Bilbo" :health 100 :strength 100))
+(def gandalf (character "Gandalf" :health 75 :strength 1000))
+
+(long-reference bilbo console character-log)
+(long-reference smaug console character-log)
+
+(wait-futures 1
+              (play bilbo attack smaug)
+              (play smaug attack bilbo)
+              (play gandalf attack bilbo)
+              )
+

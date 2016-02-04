@@ -267,5 +267,114 @@ map
     (if (== 404 response-code)
       [response-code]
       [response-code (-> conn .getInputStream slurp)])))
-(http-get "http://163.com/bac-url")
-(http-get "http://163.com/")
+(http-get "http://qq.com/bac-url")
+(http-get "http://qq.com/")
+
+(def ^:dynamic *response-code* nil)
+
+(defn http-get
+  [url-string]
+  (let [conn (-> url-string java.net.URL. .openConnection)
+        response-code (.getResponseCode conn)]
+    (when (thread-bound? #'*response-code*)
+      (set! *response-code* response-code))
+    (when (not= 404 response-code) (-> conn .getInputStream slurp))))
+
+
+(http-get "http://qq.com/")
+*response-code*
+
+(binding [*response-code* nil]
+  (let [content (http-get "http://qq.com/bad-url")]
+    (println "Response code was:" *response-code*)
+    ; ... do something with `content` if it is not nil ...
+    ))
+
+(def ^:dynamic *max-value* 255)
+(defn valid-value?
+  [v]
+  (<= v *max-value*))
+(binding [*max-value* 500]
+  (println (valid-value? 299))
+  @(future (valid-value? 299)))
+(map #(binding [*max-value* 500]
+        (valid-value? %))
+     [299])
+(def x 0)
+(alter-var-root #'x inc)
+
+(declare complex-helper-fn other-helper-fn)
+(defn public-api-function
+  [arg1 arg2]
+  (other-helper-fn arg1 arg2 (complex-helper-fn arg1 arg2)))
+(defn- complex-helper-fn
+  [arg1 arg2]
+  (println arg1 arg2))
+(defn- other-helper-fn
+  [arg1 arg2 arg3]
+  (println arg1 arg2 arg3))
+
+(public-api-function 1 3)
+
+(def a (agent 500))
+(send a inc)
+@a
+
+(def a (agent 5000))
+(def b (agent 10000))
+
+(send-off a #(Thread/sleep %))
+(send-off b #(Thread/sleep %))
+@a
+(await a b)
+@a
+@b
+
+(def a (agent nil))
+(send a (fn [_] (throw (Exception. "something is wrong"))))
+a
+(send a identity)
+
+(restart-agent a 42)
+(send a inc)
+(reduce send a (for [x (range 3)]
+                (fn [_] (throw (Exception. (str "error #" x))))))
+(agent-error a)
+(restart-agent a 42)
+(agent-error a)
+(restart-agent a 42 :clear-actions true)
+(agent-error a)
+
+(def a (agent nil :error-mode :continue))
+(send a (fn [_] (throw (Exception. "something is wrong"))))
+(send a identity)
+
+(def a (agent nil
+              :error-mode :continue
+              :error-handler (fn [the-agent exception]
+                               (.println System/out (.getMessage exception)))))
+(send a (fn [_] (throw (Exception. "something is wrong"))))
+(send a identity)
+
+(set-error-handler! a (fn [the-agent exception]
+                        (when (= "FATAL" (.getMessage exception))
+                          (set-error-mode! the-agent :fail))))
+(send a (fn [_] (throw (Exception. "FATAL"))))
+(send a identity)
+
+(require '[clojure.java.io :as io])
+(def console (agent *out*))
+(def character-log (agent (io/writer "character-states.log" :append true)))
+(defn dwrite
+  [^java.io.Writer w & content]
+  #_(doseq [x (interpose " " content)]
+    (.write w (str x)))
+  #_(doto w
+    (.write "\n")
+    .flush))
+(defn logn-reference
+  [reference & writer-agents]
+  (add-watch reference :log
+             (fn [_ reference old new]
+               (doseq [writer-agent writer-agents]
+                 (send-off writer-agent dwrite new)))))
