@@ -15,7 +15,7 @@
   (ref (merge {:name name :items #{} :health 500}
               opts)))
 
-(def smaug (character "Smag" :health 500 :strength 400 :items (set (range 50))))
+(def smaug (character "Smaug" :health 500 :strength 400 :items (set (range 50))))
 (def bilbo (character "Bilbo" :health 100 :strength 100))
 (def gandalf (character "Gandalf" :health 75 :mana 750))
 
@@ -59,7 +59,7 @@
        (commute to update-in [:items] conj item)
        (commute from update-in [:items] disj item))))
 
-(def smaug (character "Smag" :health 500 :strength 400 :items (set (range 50))))
+(def smaug (character "Smaug" :health 500 :strength 400 :items (set (range 50))))
 (def bilbo (character "Bilbo" :health 100 :strength 100))
 (def gandalf (character "Gandalf" :health 75 :mana 750))
 
@@ -169,30 +169,55 @@
 (require '[clojure.java.io :as io])
 (def console (agent *out*))
 (def character-log (agent (io/writer "character-states.log" :append true)))
-(defn dwrite
+(defn write
   [^java.io.Writer w & content]
-  #_(doseq [x (interpose " " content)]
+  (doseq [x (interpose " " content)]
     (.write w (str x)))
-  #_(doto w
+  (doto w
     (.write "\n")
     .flush))
-(defn long-reference
+(defn log-reference
   [reference & writer-agents]
   (add-watch reference :log
              (fn [_ reference old new]
                (doseq [writer-agent writer-agents]
-                 (send-off writer-agent dwrite new)))))
+                 (send-off writer-agent write new)))))
 
 (def smaug (character "Smaug" :health 500 :strength 400))
 (def bilbo (character "Bilbo" :health 100 :strength 100))
-(def gandalf (character "Gandalf" :health 75 :strength 1000))
+(def gandalf (character "Gandalf" :health 75 :mana 1000))
 
-(long-reference bilbo console character-log)
-(long-reference smaug console character-log)
+(log-reference bilbo console character-log)
+(log-reference smaug console character-log)
 
 (wait-futures 1
               (play bilbo attack smaug)
               (play smaug attack bilbo)
-              (play gandalf attack bilbo)
-              )
+              (play gandalf heal bilbo))
+;=============================================================================
+(defn attack
+  [aggressor target]
+  (dosync 
+    (let [damage (* (rand 0.1) (:strength @aggressor) (ensure daylight))]
+      (send-off console write
+                (:name @aggressor) "hits" (:name target) "for" damage)
+      (commute target update-in [:health] #(max 0 (- % damage))))))
 
+(defn heal
+  [healer target]
+  (dosync
+    (let [aid (min (* (rand 0.1) (:mana @healer))
+                   (- (:max-health @target) (:health @target)))]
+      (when (pos? aid)
+       (send-off console write
+                (:name @healer) "heals" (:name target) "for" aid) 
+        (commute healer update-in [:mana] - (max 5 (/ aid 5)))
+        (alter target update-in [:health] + aid)))))
+(dosync 
+  (alter smaug assoc :health 500)
+  (alter bilbo assoc :health 100)
+  )
+(wait-futures 1
+              (play bilbo attack smaug)
+              (play smaug attack bilbo)
+              (play gandalf heal bilbo))
