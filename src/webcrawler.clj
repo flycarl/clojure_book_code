@@ -31,7 +31,7 @@
 (declare get-url)
 (def agents (set (repeatedly 25 #(agent {::t #'get-url :queue url-queue}))))
 
-(declare run process handle-result)
+(declare run process handle-results)
 (defn ^::blocking get-url
   [{:keys [^BlockingQueue queue] :as state}]
   (let [url (as-url (.take queue))]
@@ -54,7 +54,68 @@
        :url url
        :links (links-from url html)
        :words (reduce (fn [m word]
-                        (updated-in m [word] (fnil inc 0)))
+                        (update-in m [word] (fnil inc 0)))
                       {}
                       (words-from html))})
     (finally (run *agent*))))
+
+(defn ^::blocking handle-results
+  [{:keys [url links words]}]
+  (try
+    (swap! crawled-urls conj url)
+    (doseq [url links]
+      (.put url-queue url))
+    (swap! word-freqs (partial merge-with +) words)
+
+    {::t #'get-url :queue url-queue}
+    (finally (run *agent*))))
+
+(defn paused? [agent] (::paused (meta agent)))
+
+(defn run
+  ([] (doseq [a agents] (run a)))
+  ([a]
+   (when (agents a)
+     (send a (fn [{transition ::t :as state}]
+               (when-not (paused? *agent*)
+                 (let [dispatch-fn (if (-> transition meta ::blocking)
+                                     send-off
+                                     send)]
+                   (dispatch-fn *agent* transition)))
+               state)))))
+(defn pause
+  ([] (doseq [a agents] (pause a)))
+  ([a] (alter-meta! a assoc ::paused true)))
+
+(defn restart
+  ([] (doseq [a agents] (restart a)))
+  ([a]
+   (alter-meta! a dissoc ::paused)
+   (run a)))
+
+(defn test-crawler
+  "Restes all state associated with the crawler, adds the given URL to the
+  url-queue, and runs the crawler for 60 seconds, returning a vector
+  containing the number of URLs crawled, and the number of URLs
+  accumulated through crawling that have yet to be visited."
+  [agent-count starting-url]
+  (def agents (set (repeatedly agent-count
+                               #(agent {::t #'get-url :queue url-queue}))))
+  (.clear url-queue)
+  (swap! crawled-urls empty)
+  (swap! word-freqs empty)
+  (.add url-queue starting-url)
+  (run)
+  (Thread/sleep 60000)
+  (pause)
+  [(count @crawled-urls) (count url-queue)])
+
+(test-crawler 25 "http://www.bbc.com/news")
+(->> (sort-by val @word-freqs)
+     reverse
+     (take 10))
+(->> (sort-by val @word-freqs)
+     (take 10))
+
+(alter-meta! #'process assoc ::blocking true)
+(test-crawler 25 "http://www.bbc.com/news")
