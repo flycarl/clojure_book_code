@@ -1,7 +1,8 @@
-(ns chapter5)
+(ns chapter5 (:use clojure.pprint))
 (require '(clojure [string :as str]
-                   [walk :as walk]
-                   [pprint as pprint]))
+                   [walk :as walk]))
+
+
 (defmacro reverse-it
   [form]
   (walk/postwalk #(if (symbol? %)
@@ -17,10 +18,10 @@
                  (qesod [gra (egnar 5)]
                         (nltnirp (cni gra)))))
 
-(defn oops [args] (frobnicate arg))
+;(defn oops [args] (frobnicate arg))
 
 (defmacro oopsMacro [arg] `(frobnicate ~arg))
-(oopsMacro 123)
+;(oopsMacro 123)
 
 (macroexpand-1 '(oops 123))
 (pprint (macroexpand '(reverse-it
@@ -63,3 +64,26 @@
 `c5/foo
 
 `foo
+(def foo 123)
+(list `map `println [foo])
+`(map println [~foo])
+`(map println ~[foo])
+
+`(println ~(keyword (str foo)))
+
+(let [defs '((def x 123)
+             (def y 456))]
+  (concat (list 'do) defs))
+
+(let [defs '((def x 123)
+             (def y 456))]
+  `(do ~@defs))
+
+(defmacro foo
+  [& body]
+  `(do-something ~@body))
+
+(macroexpand-1 '(foo (doseq [x (range 5)]
+                       (println x))
+                     :done))
+'`(map println ~[foo])
