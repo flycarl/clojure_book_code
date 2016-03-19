@@ -18,10 +18,10 @@
                  (qesod [gra (egnar 5)]
                         (nltnirp (cni gra)))))
 
-;(defn oops [args] (frobnicate arg))
+                                        ;(defn oops [args] (frobnicate arg))
 
 (defmacro oopsMacro [arg] `(frobnicate ~arg))
-;(oopsMacro 123)
+                                        ;(oopsMacro 123)
 
 (macroexpand-1 '(oops 123))
 (pprint (macroexpand '(reverse-it
@@ -87,3 +87,118 @@
                        (println x))
                      :done))
 '`(map println ~[foo])
+
+(defn fn-hello [x]
+  (str "Hello, " x "!"))
+
+(defmacro macro-hello [x]
+  `(str "Hello, " ~x "!"))
+
+(fn-hello "Brian")
+(macro-hello "Brian")
+
+(map fn-hello ["Brain" "Not Brain"])
+(map macro-hello ["Brain" "Not Brain"])
+(map #(macro-hello %) ["Brain" "Not Brain"])
+
+(defmacro unhygienic
+  [& body]
+  `(let [x :oops]
+     ~@body))
+(unhygienic (println "x:" x))
+(macroexpand-1 `(unhygienic (println "x:" x)))
+
+(defmacro still-unhygienic
+  [& body]
+  `(let [~'x :oops]
+     ~@body))
+(still-unhygienic (println "x:" x))
+
+(let [x :this-is-important]
+  (still-unhygienic
+   (println "x:" x)))
+
+(gensym "sym")
+
+(defmacro hygienic
+  [& body]
+  (let [sym (gensym)]
+    `(let [~sym :macro-value]
+       ~@body)))
+(let [x :important-value]
+  (hygienic
+   (println "x:" x)))
+
+(defmacro hygienic
+  [& body]
+  `(let [x# :macro-value]
+     ~@body))
+
+`(x# x#)
+(defmacro auto-gensyms
+  [& numbers]
+  `(let [x# (rand-int 10)]
+     (+ x# ~@numbers)))
+(auto-gensyms 1 2 3 4 5)
+(macroexpand-1 '(auto-gensyms 1 2 3 4 5))
+
+[`x# `x#]
+
+(defmacro our-doto [expr & forms]
+  `(let [obj# ~expr]
+     ~@(map (fn [[fn & args]]
+              `(~f obj# ~@args)) forms)
+     obj#))
+
+(our-doto "It words"
+          (println "I can't believe it"))
+
+(defmacro our-doto [expr & forms]
+  (let [obj (gensym "obj")]
+    `(let [~obj ~expr]
+       ~@(map (fn [[f & args]]
+                `(~f ~obj ~@args)) forms)
+       ~obj)))
+
+(defmacro our-doto [expr & forms]
+  (let [obj (gensym "obj")]
+    `(let [~obj ~expr]
+       ~@(map (fn [[f & args]]
+                (list* f obj args)) forms)
+       ~obj)))
+(our-doto "It words"
+          (println "I can't believe it")
+          (println "I still can't believe it"))
+(defmacro with
+  [name & body]
+  `(let [~name 5]
+     ~@body))
+(with bar (+ 10 bar))
+(with foo (+ 40 foo))
+
+(defmacro spy [x]
+  `(do
+     (println "spied" '~x ~x)
+     ~x))
+
+(spy 2)
+
+(spy (rand-int 10))
+(macroexpand-1 '(spy (rand-int 10)))
+
+(defmacro spy [x]
+  `(let [x# ~x]
+     (println "spied" '~x x#)
+     x#))
+(spy (rand-int 10))
+(macroexpand-1 '(spy (rand-int 10)))
+
+(defn spy-helper [expr value]
+  (println expr value)
+  value)
+
+(defmacro spy [x]
+  `(spy-helper '~x ~x))
+
+(spy (rand-int 10))
+(macroexpand-1 '(spy (rand-int 10)))
