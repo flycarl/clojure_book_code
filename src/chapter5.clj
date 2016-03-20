@@ -98,14 +98,16 @@
 (macro-hello "Brian")
 
 (map fn-hello ["Brain" "Not Brain"])
-(map macro-hello ["Brain" "Not Brain"])
+;; following line can't take value of a macro
+;(map macro-hello ["Brain" "Not Brain"])
 (map #(macro-hello %) ["Brain" "Not Brain"])
 
 (defmacro unhygienic
   [& body]
   `(let [x :oops]
      ~@body))
-(unhygienic (println "x:" x))
+;; following line can't let qulified name : baz/x
+; (unhygienic (println "x:" x))
 (macroexpand-1 `(unhygienic (println "x:" x)))
 
 (defmacro still-unhygienic
@@ -147,11 +149,11 @@
 (defmacro our-doto [expr & forms]
   `(let [obj# ~expr]
      ~@(map (fn [[fn & args]]
-              `(~f obj# ~@args)) forms)
+              `(~fn obj# ~@args)) forms)
      obj#))
-
-(our-doto "It words"
-          (println "I can't believe it"))
+;; this our-doto is wrong
+;; (our-doto "It words"
+;;          (println "I can't believe it"))
 
 (defmacro our-doto [expr & forms]
   (let [obj (gensym "obj")]
@@ -189,7 +191,7 @@
 (defmacro spy [x]
   `(let [x# ~x]
      (println "spied" '~x x#)
-     x#))
+    x#))
 (spy (rand-int 10))
 (macroexpand-1 '(spy (rand-int 10)))
 
@@ -202,3 +204,34 @@
 
 (spy (rand-int 10))
 (macroexpand-1 '(spy (rand-int 10)))
+
+(defmacro spy-env []
+  (let [ks (keys &env)]
+    `(prn (zipmap '~ks [~@ks]))))
+
+(let [x 1 y 2]
+     (spy-env)
+     (+ x y))
+
+(defmacro simplify
+  [expr]
+  (let [locals (set (keys &env))]
+    (if (some locals (flatten expr))
+      expr
+      (do
+        (println "Precomputing: " expr)
+        (list `quote (eval expr))))))
+
+(defn f
+  [a b c]
+  (+ a b c (simplify (apply + (range 5e7)))))
+
+(f 1 2 3)
+
+(defn f'
+  [a b c]
+  (simplify (apply + a b c (range 5e7))))
+(f' 1 2 3)
+
+(@#'simplify nil {} '(inc 1))
+(@#'simplify nil {'x nil} '(inc x))
