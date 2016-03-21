@@ -235,3 +235,129 @@
 
 (@#'simplify nil {} '(inc 1))
 (@#'simplify nil {'x nil} '(inc x))
+;;
+;; &form
+;;
+(defmacro ontology
+  [& triples]
+  (every? #(or (== 3 (count %))
+               (throw (IllegalArgumentException.
+                       "All triples provided as arguments must have 3 elements")))
+          triples)
+  ;; build and emit pre-processed ontology here ...
+  )
+;; following line error :All triples provided as arguments must have 3 elements
+(ontology ["Boston" :capital-of])
+
+(defmacro ontology
+  [& triples]
+  (every? #(or (== 3 (count %))
+               (throw (IllegalArgumentException.
+                       (format "`%s` provided to `%s` on line %s has < 3 elements"
+                               %
+                               (first &form)
+                               (-> &form meta :line)))))
+          triples)
+  ;; build and emit pre-processed ontology here ...
+  )
+
+(ns com.clojurebook.macros)
+(refer 'baz :rename '{ontology triples})
+(triples ["Boston" :capital-of])
+
+(set! *warn-on-reflection* true)
+(defn first-char-of-either
+  [a b]
+  (.substring ^String (or a b) 0 1))
+
+(defn first-char-of-either
+  [^String a ^String b]
+  (.substring (or a b) 0 1))
+
+(binding [*print-meta* true]
+  (prn '^String (or a b)))
+
+(binding [*print-meta* true]
+  (prn (macroexpand '^String (or a b))))
+
+(defmacro or
+  ([] nil)
+  ([x] x)
+  ([x & next]
+      `(let [or# ~x]
+         (if or# or# (or ~@next)))))
+
+(defmacro OR
+  ([] nil)
+  ([x]
+   (let [result (with-meta (gensym "res") (meta &form))]
+     `(let [~result ~x]
+        ~result)))
+  ([x & next]
+   (let [result (with-meta (gensym "res") (meta &form))]
+     `(let [or# ~x
+            ~result (if or# or# (OR ~@next))]
+        ~result))))
+(binding [*print-meta* true]
+  (prn (macroexpand '^String (OR a b))))
+(defn first-char-of-any
+  [a b]
+  (.substring ^String (OR a b) 0 1))
+
+
+(defn preserve-metadata
+  "Ensures that the body containing `expr` will carry the metadata
+   from `&form`."
+  [&form expr]
+  (let [res (with-meta (gensym "res") (meta &form))]
+    `(let [~res ~expr]
+       ~res)))
+
+(defmacro OR
+  "Same as `clojure.core/or`, but preserves user-supplied metadata
+   (e.g. type hints)."
+  ([] nil)
+  ([x] (preserve-metadata &form x))
+  ([x & next]
+   (preserve-metadata &form `(let [or# ~x]
+                               (if or# or# (or ~@next))))))
+(binding [*print-meta* true]
+  (prn (macroexpand '^String (OR a b))))
+
+;;Testing Contextual Macros
+(defn macroexpand1-env [env form]
+  (if-let [[x & xs] (and (seq? form) (seq form))]
+    (if-let [v (and (symbol? x) (resolve x))]
+      (if (-> v meta :macro)
+        (apply @v form env xs)
+        form)
+      form)
+    form))
+
+(macroexpand1-env '{} '(simplify (range 10)))
+(macroexpand1-env '{range nil} '(simplify (range 10)))
+
+(defmacro newspy [expr]
+  `(let [value# ~expr]
+     (println (str "line #" ~(-> &form meta :line) ",")
+              '~expr value#)
+     value#))
+
+(let [a 1
+      a (newspy (inc a))
+      a (newspy (inc a))]
+  a)
+
+(macroexpand1-env {} (with-meta '(newspy (+1 1)) {:line 42}))
+
+(defmacro if-all-let [bindings then else]
+  (reduce (fn [subform binding]
+            `(if-let [~@binding] ~subform ~else))
+          then (reverse (partition 2 bindings))))
+
+(defn macroexpand1-env [env form]
+  (if-all-let [[x & xs] (and (seq? form) (seq form))
+               v (and (symbol? x) (resolve x))
+               _ (-> v meta :macro)]
+              (apply @v form env xs)
+              form))
