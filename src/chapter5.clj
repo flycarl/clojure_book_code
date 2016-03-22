@@ -361,3 +361,48 @@
                _ (-> v meta :macro)]
               (apply @v form env xs)
               form))
+;; -> and ->>
+(defn ensure-seq [x]
+  (if (seq? x) x (list x)))
+
+(ensure-seq 'x)
+(ensure-seq '(x))
+
+(defn insert-second
+  "Insert x as the second item in seq y."
+  [x ys]
+  (let [ys (ensure-seq ys)]
+    (concat (list (first ys) x)
+            (rest ys))))
+
+(defn insert-second
+  "Insert x as the second item in seq y."
+  [x ys]
+  (let [ys (ensure-seq ys)]
+    `(~(first ys) ~x ~@(rest ys))))
+
+(defn insert-second
+  "Insert x as the second item in seq y."
+  [x ys]
+  (let [ys (ensure-seq ys)]
+    (list* (first ys) x (rest ys))
+    ))
+
+(defmacro thread
+  "Thread x through successive forms."
+  ([x] x)
+  ([x form] (insert-second x form))
+  ([x form & more] `(thread (thread ~x ~form) ~@more)))
+
+(thread [1 2 3] (conj 4) reverse println)
+(-> [1 2 3] (conj 4) reverse println)
+
+(defn thread-fns
+  ([x] x)
+  ([x form] (form x))
+  ([x form & more] (apply thread-fns (form x) more))
+  )
+(thread-fns [1 2 3] reverse #(conj % 4) prn)
+(thread [1 2 3] .toString (.split " ") seq)
+(thread-fns [1 2 3] .toString #(.split % " ") seq)
+(thread-fns [1 2 3] #(.toString %) #(.split % " ") seq)
