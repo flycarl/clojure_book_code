@@ -51,3 +51,11 @@ str/trim
 (import 'java.util.Date 'java.text.SimpleDateFormat)
 
 (.format (SimpleDateFormat. "MM/dd/yyyy") (Date.))
+
+(import '(java.util Arrays Collections))
+
+(->> (iterate inc 0)
+     (take 5)
+     into-array
+     Arrays/asList
+     Colletions/max)
