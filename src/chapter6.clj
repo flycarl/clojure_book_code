@@ -40,11 +40,11 @@ chapter6/a
 
 join
 
-intersectiono
+intersection
 
 str/trim
 
-(Date.)
+;(Date.)
 
 (java.util.Date.)
 
@@ -58,4 +58,7 @@ str/trim
      (take 5)
      into-array
      Arrays/asList
-     Colletions/max)
+     Collections/max)
+
+;(import 'java.awt.List 'java.util.List)
+;= List already refers to: class
