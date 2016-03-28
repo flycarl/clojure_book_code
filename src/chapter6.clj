@@ -1,5 +1,4 @@
 (ns chapter6)
-
 *ns*
 (defn a [] 42)
 (in-ns 'physics.constants)
@@ -62,3 +61,25 @@ str/trim
 
 ;(import 'java.awt.List 'java.util.List)
 ;= List already refers to: class
+
+(in-ns 'exmaples.ns)
+(clojure.core/refer 'clojure.core :exclude '[next replace remove])
+(require '(clojure [string :as string]
+                   [set :as set])
+         '[clojure.java.shell :as sh])
+(use '(clojure zip xml))
+(import 'java.util.Date
+        'java.text.SimpleDateFormat
+        '(java.util.concurrent Executors
+                               LinkedBlockingQueue))
+
+(ns examples.ns
+  (:refer-clojure :exclude [next replace remove])
+  (:require (clojure [string :as string]
+                     [set :as set])
+            [clojure.java.shell :as sh])
+  (:use (clojure zip xml))
+  (:import java.util.Date
+           java.text.SimpleDateFormat
+           (java.util.concurrent Executors
+                                 LinkedBlockingQueue)))
