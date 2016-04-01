@@ -107,3 +107,12 @@ k
 (equiv? "foo" 1)
 (equiv? 4 4N 4.0 4.0M)
 (equiv? 0.125 0.125M 1/8)
+
+(into #{} [1 1N (Integer. 1) (Short. (short 1))])
+(into {}
+      [[1 :long]
+       [1N :bigint]
+       [(Integer. 1) :integer]])
+
+(defn foo [a] 0)
+(seq (.getDeclaredMethods (class foo)))
