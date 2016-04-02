@@ -2,7 +2,7 @@
   (:import java.awt.image.BufferedImage
            (java.awt Color RenderingHints)))
 
-defn- escape
+(defn- escape
   "Returns an integer indicating how many iterations were required
    before the value of z (using the components `a` and `b`) could
    be determined to have escaped the Mandelbrot set. If z will not
@@ -61,7 +61,7 @@ defn- escape
 
 (defn render-image
   "Given a mandelbrot set membership grid as returned by a call to
-  mandelbrot , returns a Bufferedimage with the same resoluion as the
+  mandelbrot , returns a Bufferedimage with the same resolution as the
   grid that uses a discrete grayscale color palette."
   [mandelbrot-grid]
   (let [palette (vec (for [c (range 500)]
@@ -83,3 +83,22 @@ defn- escape
 
 (do (time (mandelbrot -2.25 0.75 -1.5 1.5 :width 1600 :height 1200 :depth 1000))
     nil)
+
+(defn- escape
+  [^double a0 ^double b0 depth]
+  (loop [a a0
+         b b0
+         iteration 0]
+    (cond
+      (< 4 (+ (* a a) (* b b))) iteration
+      (>= iteration depth) -1
+      :else (recur (+ a0 (- (* a a) (* b b)))
+                   (+ b0 (* 2 (* a b)))
+                   (inc iteration)))))
+(do (time (mandelbrot -2.25 0.75 -1.5 1.5 :width 1600 :height 1200 :depth 1000))
+    nil)
+(render-image (mandelbrot -2.25 0.75 -1.5 1.5 :width 800 :height 800 :depth 500))
+(render-image (mandelbrot -1.5 -1.3 -0.1 0.1 :width 800 :height 800 :depth 500))
+
+(javax.imageio.ImageIO/write *1 "png" (java.io.File. "mandelbrot.png"))
+(javax.imageio.ImageIO/write *1 "png" (java.io.File. "mandelbrot2.png"))
