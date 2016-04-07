@@ -1,4 +1,4 @@
-(ns chapter6)
+(ns chapter8)
 *ns*
 (defn a [] 42)
 (in-ns 'physics.constants)
@@ -8,8 +8,8 @@
 (clojure.core/+ 1 1)
 (clojure.core/range -20 20 4)
 
-chapter6/a
-(clojure.core/refer 'chapter6)
+chapter8/a
+(clojure.core/refer 'chapter8)
 (a)
 
 (clojure.core/refer 'clojure.core
