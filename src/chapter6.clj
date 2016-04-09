@@ -1,0 +1,98 @@
+(ns chapter6)
+
+(defprotocol Matrix
+  "Protocol for working with 2d datastructures."
+  (lookup [matrix i j])
+  (update [matrix i j value])
+  (rows [matrix])
+  (cols [matrix])
+  (dims [matrix]))
+
+(extend-protocol Matrix
+  clojure.lang.IPersistentVector
+  (lookup [vov i j]
+    (get-in vov [i j]))
+  (update [vov i j value]
+    (assoc-in vov [i j] value))
+  (rows [vov]
+    (seq vov))
+  (cols [vov]
+    (apply map vector vov))
+  (dims [vov]
+    [(count vov) (count (first vov))]))
+
+(defn vov
+  "Create a vector of h w-item vectors."
+  [h w]
+  (vec (repeat h (vec (repeat w nil)))))
+
+(def matrix (vov 3 4))
+
+matrix
+
+(update matrix 1 2 :x)
+
+(lookup *1 1 2)
+
+(rows (update matrix 1 2 :x))
+(cols (update matrix 1 2 :x))
+
+(extend-protocol Matrix
+  (Class/forName "[[D")
+  (lookup [matrix i j]
+    (aget matrix i j))
+  (update [matrix i j value]
+    (let [clone (aclone matrix)]
+      (aset clone i
+            (doto (aclone (aget clone i))
+              (aset j value)))
+      clone))
+  (rows [matrix]
+    (map vec matrix))
+  (cols [matrix]
+    (apply map vector matrix))
+  (dims [matrix]
+    (let [rs (count matrix)]
+      (if (zero? rs)
+        [0 0]
+        [rs (count (aget matrix 0))]))))
+
+(def matrix (make-array Double/TYPE 2 3))
+
+(rows matrix)
+
+(rows (update matrix 1 1 3.4))
+
+(lookup (update matrix 1 1 3.4) 1 1)
+
+(cols (update matrix 1 1 3.4))
+
+(dims matrix)
+
+(defrecord Point [x y])
+(deftype Point [x y])
+
+(Point. 3 4)
+(.x (Point. 3 4))
+
+(defrecord NamedPoint [^String name ^long x ^long y])
+
+(NamedPoint/getBasis)
+
+(map meta (NamedPoint/getBasis))
+
+(def x "hello")
+
+(defrecord Point [x y])
+
+(Point. 5 5)
+
+(ns user2)
+(refer 'chapter6)
+x
+Point
+(import 'chapter6.Point)
+Point
+
+(ns chapter6)
+(defrecord Point [x y])
