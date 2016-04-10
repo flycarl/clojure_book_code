@@ -96,3 +96,34 @@ Point
 
 (ns chapter6)
 (defrecord Point [x y])
+
+(= (Point. 3 4) (Point. 3 4))
+
+(= 3 3N)
+
+(= (Point. 3N 4N) (Point. 3 4))
+
+(:x (Point. 3 4))
+
+(:z (Point. 3 4) 0)
+
+(map :x [(Point. 3 4)
+         (Point. 5 6)
+         (Point. 7 8)
+         ])
+
+(assoc (Point. 3 4) :z 5)
+
+(let [p (assoc (Point. 3 4) :z 5)]
+  (dissoc p :x))
+
+(let  [p (assoc (Point. 3 4) :z 5)]
+  (dissoc p :z))
+
+(:z (assoc (Point. 3 4) :z 5))
+(.z (assoc (Point. 3 4) :z 5))
+(.x (assoc (Point. 3 4) :z 5))
+
+(-> (Point. 3 4)
+    (with-meta {:foo :bar})
+    meta)
