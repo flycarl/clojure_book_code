@@ -127,3 +127,60 @@ Point
 (-> (Point. 3 4)
     (with-meta {:foo :bar})
     meta)
+(->Point 3 4)
+
+(map->Point {:x 3, :y 4, :z 5})
+
+(apply ->Point [5 6])
+
+(map (partial apply ->Point) [[5 6] [7 8] [9 10]])
+
+(map map->Point [{:x 1 :y 2} {:x 5 :y 6 :z 44}])
+
+(Point/create {:x 3, :y 4, :z 5})
+
+(defn log-point
+  [x]
+  {:pre [(pos? x)]}
+  (Point. x (Math/log x)))
+
+(log-point -42)
+
+(log-point Math/E)
+
+(defn point [x y]
+  {:x x, :y y})
+
+(defrecord Point [x y])
+
+(= (Point. 3 4) (Point. 3 4))
+
+(= {:x 3 :y 4} (Point. 3 4))
+(= (Point. 3 4) {:x 3 :y 4})
+
+(deftype Point [x y])
+
+(.x (Point. 3 4))
+
+(:x (Point. 3 4))
+
+(deftype SchrodingerCat [^:unsynchronized-mutable state]
+  clojure.lang.IDeref
+  (deref [sc]
+    (locking sc
+      (or state
+          (set! state (if (zero? (rand-int 2))
+                        :dead
+                        :alive))))))
+
+(defn schrodinger-cat
+  "Creates a new Schrodinger's cat. Beware, the PEPL may kill it!"
+  []
+  (SchrodingerCat. nil))
+
+(def felix (schrodinger-cat))
+
+@felix
+
+(schrodinger-cat)
+(schrodinger-cat)
