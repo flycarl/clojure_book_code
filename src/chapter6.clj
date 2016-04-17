@@ -32,7 +32,8 @@ matrix
 
 (update matrix 1 2 :x)
 
-(lookup *1 1 2)
+;(lookup *1 1 2)
+;No implemetation of method: :lookup of protocol: #'chapter6/Matrix
 
 (rows (update matrix 1 2 :x))
 (cols (update matrix 1 2 :x))
@@ -184,3 +185,23 @@ Point
 
 (schrodinger-cat)
 (schrodinger-cat)
+
+(defrecord Point [x y]
+  Matrix
+  (lookup [pt i j]
+    (when (zero? j)
+      (case i
+        0 x
+        1 y)))
+  (update [pt i j value]
+    (if (zero? j)
+      (condp = i
+        0 (Point. value y)
+        1 (Point. x value))
+      pt))
+  (rows [pt] [[x] [y]])
+  (clos [pt] [[x y]])
+  (dims [pt] [2 1])
+  )
+
+(defrecord Point [x y])
