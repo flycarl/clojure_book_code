@@ -122,7 +122,7 @@ Point
   (dissoc p :z))
 
 (:z (assoc (Point. 3 4) :z 5))
-(.z (assoc (Point. 3 4) :z 5))
+; (.z (assoc (Point. 3 4) :z 5))
 (.x (assoc (Point. 3 4) :z 5))
 
 (-> (Point. 3 4)
@@ -145,7 +145,8 @@ Point
   {:pre [(pos? x)]}
   (Point. x (Math/log x)))
 
-(log-point -42)
+; asset fail
+;(log-point -42)
 
 (log-point Math/E)
 
@@ -200,8 +201,81 @@ Point
         1 (Point. x value))
       pt))
   (rows [pt] [[x] [y]])
-  (clos [pt] [[x y]])
+  (cols [pt] [[x y]])
   (dims [pt] [2 1])
   )
 
 (defrecord Point [x y])
+(extend-protocol Matrix
+  Point
+  (lookup [pt i j]
+    (when (zero? j)
+      (case i
+        0 (:x pt)
+        1 (:y pt))))
+  (update [pt i j value]
+    (if (zero? j)
+      (condp = i
+        0 (Point. value (:y pt))
+        1 (Point. (:x pt) value))
+      pt))
+  (rows [pt]
+    [[(:x pt)] [(:y pt)]])
+  (cols [pt]
+    [[(:x pt) (:y pt)]])
+  (dims [pt] [2 1]))
+
+(defprotocol ClashWhenInLined
+  (size [x]))
+; crash
+;(defrecord R []
+;  ClashWhenInlined
+;  (size [x]))
+
+
+(defrecord R [])
+
+(extend-type R
+  ClashWhenInLined
+  (size [x]))
+
+(deftype Point [x y]
+  Matrix
+  (lookup [pt i j]
+    (when (zero? j)
+      (case i
+        0 x
+        1 y)))
+  (update [pt i j value]
+    (if (zero? j)
+      (case i
+        0 (Point. value y)
+        1 (Point. x value))
+      pt))
+  (rows [pt]
+    [[x] [y]])
+  (cols [pt]
+    [[x y]])
+  (dims [pt]
+    [2 1])
+  Object
+  (equals [this other]
+    (and (instance? (class this) other)
+         (= x (.x other)) (= y (.y other))))
+  (hashCode [this]
+    (-> x hash (hash-combine y)))
+  )
+
+(defn listener
+  "Creates an AWT/Swing `ActionListener` that delegates to the given function."
+  [f]
+  (reify
+    java.awt.event.ActionListener
+    (actionPerformed [this e]
+      (f e))))
+
+(.listFiles (java.io.File. ".")
+            (reify
+              java.io.FileFilter
+              (accept [this f]
+                (.isDirectory f))))
