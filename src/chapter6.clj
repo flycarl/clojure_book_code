@@ -279,3 +279,23 @@ Point
               java.io.FileFilter
               (accept [this f]
                 (.isDirectory f))))
+
+(defrecord Point [x y])
+(extend Point
+  Matrix
+  {:lookup (fn [pt i j]
+             (when (zero? j)
+               (case i
+                 0 (:x pt)
+                 1 ( :y pt))))
+   :update (fn [pt i j value]
+             (if (zero? j)
+               (condp = i
+                 0 (Point. value (:y pt))
+                 1 (Point. (:x pt) value))
+               pt))
+   :rows (fn [pt]
+           [[(:x pt)] [(:y pt)]])
+   :cols (fn [pt]
+           [[(:x pt) (:y pt)]])
+   :dims (fn [pt] [2 1])})
