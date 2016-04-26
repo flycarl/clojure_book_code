@@ -81,21 +81,22 @@ matrix
 (NamedPoint/getBasis)
 
 (map meta (NamedPoint/getBasis))
-
-(def x "hello")
-
-(defrecord Point [x y])
-
-(Point. 5 5)
-
-(ns user2)
-(refer 'chapter6)
-x
-Point
-(import 'chapter6.Point)
-Point
-
-(ns chapter6)
+;; refer does not work need import explicitly
+;(def x "hello")
+;
+;(defrecord Point [x y])
+;
+;(Point. 5 5)
+;
+;(ns user2)
+;(refer 'chapter6)
+;x
+;Point
+;(import 'chapter6.Point)
+;Point
+;
+;(ns chapter6)
+;;;;;;;;;;;;;;;;;;;;;;;;;
 (defrecord Point [x y])
 
 (= (Point. 3 4) (Point. 3 4))
@@ -299,3 +300,11 @@ Point
    :cols (fn [pt]
            [[(:x pt) (:y pt)]])
    :dims (fn [pt] [2 1])})
+
+;(def abstract-matrix-impl
+;  {:cols (fn [pt]
+;           (let [[h w] (dims pt)]
+;             (map(fn [x] (map #(lookup pt x y) (range 0 w)))
+;                 (range 0 h))))
+;   :rows (fn [pt]
+;           (apply map vector (cols pt)))})
