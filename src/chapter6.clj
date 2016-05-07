@@ -31,8 +31,9 @@
 matrix
 
 (update matrix 1 2 :x)
+(lookup matrix 1 2)
+(lookup (update matrix 1 2 :x) 1 2)
 
-;(lookup *1 1 2)
 ;No implemetation of method: :lookup of protocol: #'chapter6/Matrix
 
 (rows (update matrix 1 2 :x))
@@ -230,7 +231,7 @@ matrix
   (size [x]))
 ; crash
 ;(defrecord R []
-;  ClashWhenInlined
+;  ClashWhenInLined
 ;  (size [x]))
 
 
@@ -301,10 +302,45 @@ matrix
            [[(:x pt) (:y pt)]])
    :dims (fn [pt] [2 1])})
 
-;(def abstract-matrix-impl
-;  {:cols (fn [pt]
-;           (let [[h w] (dims pt)]
-;             (map(fn [x] (map #(lookup pt x y) (range 0 w)))
-;                 (range 0 h))))
-;   :rows (fn [pt]
-;           (apply map vector (cols pt)))})
+(def abstract-matrix-impl
+  {:cols (fn [pt]
+           (let [[h w] (dims pt)]
+             (map(fn [x] (map #(lookup pt x %) (range 0 w)))
+                 (range 0 h))))
+   :rows (fn [pt]
+           (apply map vector (cols pt)))})
+
+(extend Point
+  Matrix
+  (assoc abstract-matrix-impl
+         :lookup (fn [pt i j]
+                   (when (zero? j)
+                     (case i
+                       0 (:x pt)
+                       1 (:y pt))))
+         :update (fn [pt i j value]
+                   (if (zero? j)
+                     (condp = i
+                       0 (Point. value (:y pt))
+                       1 (Point. (:x pt) value))
+                     pt))
+         :dims (fn [pt] [2 1])))
+
+(defprotocol Measureable
+  "A protocol for retrieving the dimensions of widgets."
+  (width [measurable] "Returns the width in px.")
+  (height [measurable] "Returns the height in px."))
+
+(defrecord Button [text])
+
+(extend-type Button
+  Measureable
+  (width [btn]
+    (* 8 (-> btn :text count)))
+  (height [btn] 8))
+
+(def bordered
+  {:width #(* 2 (:border-width %))
+   :height #(* 2 (:border-height %))})
+
+Measureable
