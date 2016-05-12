@@ -326,7 +326,7 @@ matrix
                      pt))
          :dims (fn [pt] [2 1])))
 
-(defprotocol Measureable
+(defprotocol Measurable
   "A protocol for retrieving the dimensions of widgets."
   (width [measurable] "Returns the width in px.")
   (height [measurable] "Returns the height in px."))
@@ -334,7 +334,7 @@ matrix
 (defrecord Button [text])
 
 (extend-type Button
-  Measureable
+  Measurable
   (width [btn]
     (* 8 (-> btn :text count)))
   (height [btn] 8))
@@ -343,4 +343,144 @@ matrix
   {:width #(* 2 (:border-width %))
    :height #(* 2 (:border-height %))})
 
-Measureable
+Measurable
+
+(get-in Measurable [:impls Button])
+
+(defn combine
+  "Takes two functions f and g and returns a fn that takes a variable number
+of args, applies them to f and g and then returns the result of
+  (op rf rg) where rf and rg are the results of the calls to f and g."
+  [op f g]
+  (fn [& args]
+    (op (apply f args) (apply g args))))
+
+(defrecord BorderedButton [text border-width border-height])
+
+(extend BorderedButton
+  Measurable
+  (merge-with (partial combine +)
+              (get-in Measurable [:impls Button])
+              bordered))
+
+(let [btn (Button. "Hello World")]
+  [(width btn) (height btn)])
+
+(let [bbtn (BorderedButton. "Hello World" 6 4)]
+  [(width bbtn) (height bbtn)])
+
+(extenders Measurable)
+(extends? Measurable Button)
+(satisfies? Measurable (Button. "hello"))
+(satisfies? Measurable :other-value)
+
+(deftype Foo [x y]
+  Measurable
+  (width [_] x)
+  (height [_] y))
+
+(satisfies? Measurable (Foo. 5 5))
+(instance? chapter6.Measurable (Foo. 5 5))
+
+(defprotocol P
+  (a [x]))
+(extend-protocol P
+  java.util.Collection
+  (a [x] :collection!)
+  java.util.List
+  (a [x] :list!))
+(a [])
+
+(defprotocol P
+  (a [x]))
+
+(extend-protocol P
+  java.util.Map
+  (a [x] :map!)
+  java.io.Serializable
+  (a [x] :serializable!))
+
+(a {})
+
+(defn scaffold
+  "Given an interface, returns a 'hollow' body suitable for use with `deftype`."
+  [interface]
+  (doseq [[iface methods] (->> interface
+                               .getMethods
+                               (map #(vector (.getName (.getDeclaringClass %))
+                                             (symbol (.getName %))
+                                             (count (.getParameterTypes %))))
+                               (group-by first))]
+    (println (str " " iface))
+    (doseq [[_ name argcount] methods]
+      (println
+       (str "   "
+            (list name (into '[this] (take argcount (repeatedly gensym)))))))))
+
+(ancestors (class #{}))
+
+(scaffold clojure.lang.IPersistentSet)
+
+(declare empty-array-set)
+(def ^:private ^:const max-size 4)
+
+(deftype ArraySet [^objects items
+                   ^int size
+                   ^:unsynchronized-mutable ^int hashcode]
+  clojure.lang.IPersistentSet
+  (get [this x]
+    (loop [i 0]
+      (when (< i size)
+        (if (= x (aget items i))
+          (aget items i)
+          (recur (inc i))))))
+  (contains [this x]
+    (boolean
+     (loop [i 0]
+       (when (< i size)
+         (or (= x (aget items i)) (recur (inc i)))))))
+  (disjoin [this x]
+    (loop [i 0]
+      (if (== i size)
+        this
+        (if (not= x (aget items i))
+          (recur (inc i))
+          (ArraySet. (doto (aclone items)
+                       (aset i (aget items (dec size)))
+                       (aset (dec size) nil))
+                     (dec size)
+                     -1)))))
+  clojure.lang.IPersistentCollection
+  (count [this] size)
+  (cons [this x]
+    (cond
+      (.contains this x) this
+      (== size max-size) (into #{x} this)
+      :else (ArraySet. (doto (aclone items)
+                         (aset size x))
+                       (inc size)
+                       -1)))
+  (empty [this] empty-array-set)
+  (equiv [this that] (.equals this that))
+  clojure.lang.Seqable
+  (seq [this] (take size items))
+  Object
+  (hashCode [this]
+    (when (== -1 hashcode)
+      (set! hashcode (int (areduce items idx ret 0
+                                   (unchecked-add-int ret (hash (aget items idx)))))))
+    hashcode)
+  (equals [this that]
+    (or
+     (identical? this that)
+     (and (or (instance? java.util.Set that)
+              (instance? clojure.lang.IPersistentSet that))
+          (= (count this) (count that))
+          (every? #(contains? this %) that)))))
+
+(def ^:private empty-array-set (ArraySet. (object-array max-size) 0 -1))
+
+(defn array-set
+  "Creates an array-backed set containing the given values."
+  [& vals]
+  (into empty-array-set vals))
