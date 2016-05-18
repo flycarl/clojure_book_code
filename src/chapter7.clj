@@ -40,7 +40,7 @@
   [node value]
   (assoc node [:attrs :name] (str value)))
 
-(nsmap *ns* 'fill)
+(ns-unmap *ns* 'fill)
 (defn- fill-dispatch [node value]
   (if (= :input (:tag node))
     [(:tag node) (-> node :attrs :type)]
@@ -89,3 +89,50 @@
                :type "checkbox"}}
       "first choice")
 (fill *1 "off")
+
+(derive ::checkbox ::checkable)
+(derive ::radio ::checkable)
+(derive ::checkable ::input)
+(derive ::text ::input)
+
+(isa? ::radio ::input)
+(isa? ::radio ::text)
+
+(isa? java.util.ArrayList Object)
+(isa? java.util.ArrayList java.util.List)
+(isa? java.util.ArrayList java.util.Map)
+(derive java.util.Map ::collection)
+(derive java.util.Collection ::collection)
+(isa? java.util.Collection ::collection)
+(isa? java.util.Collection ::collection)
+
+(def h (make-hierarchy))
+(isa? h java.util.ArrayList java.util.Collection)
+
+(ns-unmap *ns* 'fill)
+
+(def fill-hierarchy (-> (make-hierarchy)
+                        (derive :input.radio ::checkable)
+                        (derive :input.check ::checkable)
+                        (derive ::checkable :input)
+                        (derive ::input.text :input)
+                        (derive ::input.hidden :input)))
+
+(defn- fill-dispatch [node value]
+  (if-let [type (and (= :input (:tag node))
+                     (-> node :attrs :type))]
+    (keyword (str "input." type))
+    (:tag node)))
+
+(defmulti fill
+  "Fill a xml/html node (as per clojure.xml)
+   with the provided value."
+  #'fill-dispatch
+  :default nil
+  :hierarchy #'fill-hierarchy)
+
+(defmethod fill nil [node value]
+  (assoc node :content [(str value)]))
+
+(defmethod fill :input [node value]
+  (assoc-in node [:attrs :value] (str value)))
